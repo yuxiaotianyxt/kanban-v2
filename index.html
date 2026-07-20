@@ -1217,6 +1217,7 @@ renderAlert();
 }
 
 function renderAlert(){
+if(!D.DM){document.getElementById('alertSection').style.display='block';document.getElementById('alertBody').innerHTML='<div class="no-data" style="padding:30px;text-align:center;color:#64748b;">专业公司数据加载中...</div>';return;}
 const sel = getSelectedData();
 let months = sel.months;
 const section = document.getElementById('alertSection');
@@ -1284,7 +1285,7 @@ var isSingleMonth = dmMonths.length === 1;
 
 if(isSingleMonth){
 var mk = dmMonths[0];
-var dm = D.DM[mk];
+var dm = D.DM && D.DM[mk];
 if(!dm || !dm.types || !dm.types[bizType]){
 return '<div class="no-data" style="padding:30px;text-align:center;color:#64748b;">暂无数据</div>';
 }

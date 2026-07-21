@@ -1679,7 +1679,7 @@ targetDay=maxDay;
 if(targetDay===0) return;
 var targetDayStr=String(targetDay);
 
-var dayData=(dm.dailySingle && dm.dailySingle[targetDayStr])?dm.dailySingle[targetDayStr]:null;
+var dayData=(D.DM[mk].dailySingle && D.DM[mk].dailySingle[targetDayStr])?D.DM[mk].dailySingle[targetDayStr]:null;
 if(dayData && dayData[bizType]){
 var dayTypeData=dayData[bizType];
 Object.keys(dayTypeData).forEach(function(prov){

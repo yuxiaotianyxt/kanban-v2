@@ -1244,7 +1244,7 @@ var html = '';
 if(proMonTab === 0){
 html = renderProMonCtrlTab('超高清', months, selDay);
 } else if(proMonTab === 1){
-html = renderProMonSettleTab('一点结算-天翼出行', '天翼出行', months, settleGrandTotal, false, settleCatKeys);
+html = renderProMonSettleTab('一点结算-天翼出行', '天翼出行', months, settleGrandTotal, false, settleCatKeys, selDay);
 } else if(proMonTab === 2){
 html = renderProMonSimpleTab('云游戏', months, true, true, selDay);
 } else if(proMonTab === 3){
@@ -1489,7 +1489,7 @@ return html;
 }
 
 // Render tab using v6.3 settle_data (for 天翼出行)
-function renderProMonSettleTab(catKey, tabName, months, settleGrandTotal, showCtrl, settleCatKeys){
+function renderProMonSettleTab(catKey, tabName, months, settleGrandTotal, showCtrl, settleCatKeys, selDay){
 const cat = D.settle_data[catKey];
 if(!cat || !cat.provinces) return '<div class="no-data">暂无数据</div>';
 const prevMonths = getPrevYearMonths(months);
@@ -1510,7 +1510,9 @@ var ctrl2Val = settleGrandTotal * 0.35;
 
 // Build province data
 var rows = [];
-var totalCurr = 0, totalPrev = 0;
+var totalCurr = 0, totalPrev = 0, totalDayVal = 0;
+var dmMonthKey = null;
+if(months.length > 0){var _p = months[0].split("-"); var _y = parseInt(_p[0]); var _mo = parseInt(_p[1]); if(_y === 2026 && _mo >= 1 && _mo <= 7){dmMonthKey = String(_mo);}}
 
 provinceList.forEach(prov=>{
 if(!cat.provinces[prov]) return;
@@ -1523,9 +1525,12 @@ prevMonths.forEach(m=>{
 var v = cat.provinces[prov][m];
 if(v) prev += v;
 });
+var dayVal = 0;
+if(selDay!=null && dmMonthKey){var _dm = D.DM[dmMonthKey]; if(_dm && _dm.dailySingle && _dm.dailySingle[String(selDay)] && _dm.dailySingle[String(selDay)][tabName]){dayVal = _dm.dailySingle[String(selDay)][tabName][prov] || 0;}}
 totalCurr += curr;
 totalPrev += prev;
-rows.push({prov:prov, curr:curr, prev:prev});
+totalDayVal += dayVal;
+rows.push({prov:prov, curr:curr, prev:prev, dayVal:dayVal});
 });
 
 // Sort by curr desc
@@ -1548,7 +1553,7 @@ var isSingleMonth = months.length === 1;
 var showCtrlLine = isSingleMonth && showCtrl;
 html += '<thead><tr style="border-bottom:1px solid rgba(56,189,248,0.2);">'+
 '<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">省份</th>'+
-'<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">当期累计(万元)</th>'+
+'<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">当期累计(万元)</th>'+(selDay!=null?'<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">当日兑换额</th>':'')+
 (showCtrlLine?'<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">去年同期</th>':'')+
 '<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">同比</th>'+
 '<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">环比</th>'+
@@ -1578,6 +1583,7 @@ var rowBg=showCtrlLine?alertBg:'transparent';
 html += '<tr style="border-bottom:1px solid rgba(56,189,248,0.06);background:'+rowBg+';">';
 html += '<td style="padding:8px 10px;text-align:center;color:#e2e8f0;">'+r.prov+'</td>';
 html += '<td style="padding:8px 10px;text-align:center;color:#f1f5f9;font-weight:600;">'+fmtNum(r.curr)+'</td>';
+if(selDay!=null){html += '<td style="padding:8px 10px;text-align:center;color:#cbd5e1;">'+(r.dayVal>0?fmtNum(r.dayVal):'-')+'</td>';}
 if(showCtrlLine){html += '<td style="padding:8px 10px;text-align:center;color:#cbd5e1;">'+(r.prev>0?fmtNum(r.prev):'-')+'</td>';}
 html += '<td style="padding:8px 10px;text-align:center;">'+yoyStr+'</td>';
 html += '<td style="padding:8px 10px;text-align:center;">'+momStr+'</td>';
@@ -1605,6 +1611,7 @@ var totalMomStr=fmtChg(totalMom);
 html += '<tr style="border-top:2px solid rgba(56,189,248,0.15);background:rgba(56,189,248,0.05);">';
 html += '<td style="padding:8px 10px;text-align:center;color:#38bdf8;font-weight:700;">合计</td>';
 html += '<td style="padding:8px 10px;text-align:center;color:#f1f5f9;font-weight:700;">'+fmtNum(totalCurr)+'</td>';
+if(selDay!=null){html += '<td style="padding:8px 10px;text-align:center;color:#cbd5e1;font-weight:700;">'+fmtNum(totalDayVal)+'</td>';}
 if(showCtrlLine){html += '<td style="padding:8px 10px;text-align:center;color:#cbd5e1;font-weight:700;">'+(totalPrev>0?fmtNum(totalPrev):'-')+'</td>';}
 html += '<td style="padding:8px 10px;text-align:center;font-weight:700;">'+totalYoyStr+'</td>';
 html += '<td style="padding:8px 10px;text-align:center;font-weight:700;">'+totalMomStr+'</td>';

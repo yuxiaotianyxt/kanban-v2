@@ -1296,7 +1296,7 @@ var hasSettle26 = !!settle26;
 var hasSettle25 = !!settle25;
 
 var rows = [];
-var totalV26 = 0, totalSettle26 = 0, totalSettle25 = 0, totalV25 = 0, totalForecast = 0;
+var totalV26 = 0, totalSettle26 = 0, totalSettle25 = 0, totalV25 = 0, totalForecast = 0, totalDayVal = 0;
 
 Object.keys(typeData).forEach(prov=>{
 if(prov === '合计' || prov === '总计') return;
@@ -1319,8 +1319,13 @@ var ctrl1 = d.ctrl1 || (v25 > 0 ? v25 * 1.2 : 0);
 var ctrl2 = d.ctrl2 || (s26 > 0 ? s26 * 0.35 : 0);
 var forecast = (d.forecast !== undefined) ? d.forecast : ((ctrl1 > 0 && ctrl2 > 0) ? Math.min(ctrl1, ctrl2) : Math.max(ctrl1, ctrl2));
 var warning = (forecast > 0 && v26 > forecast) ? 1 : 0;
-rows.push({prov:prov, s26:s26, s25:s25, v25:v25, ctrl1:ctrl1, ctrl2:ctrl2, v26:v26, forecast:forecast, warning:warning});
+var dayVal = 0;
+if(selDay!=null && dm.dailySingle && dm.dailySingle[String(selDay)] && dm.dailySingle[String(selDay)][bizType]){
+dayVal = dm.dailySingle[String(selDay)][bizType][prov] || 0;
+}
+rows.push({prov:prov, s26:s26, s25:s25, v25:v25, ctrl1:ctrl1, ctrl2:ctrl2, v26:v26, dayVal:dayVal, forecast:forecast, warning:warning});
 totalV26 += v26;
+totalDayVal += dayVal;
 totalSettle26 += s26;
 totalSettle25 += s25;
 totalV25 += v25;
@@ -1338,6 +1343,7 @@ html += '<thead><tr style="border-bottom:1px solid rgba(56,189,248,0.2);">'+
 '<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">管控线1(去年×1.2)</th>'+
 (hasSettle26?'<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">管控线2(结算×35%)</th>':'')+
 '<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">'+(selDay!=null?'1-'+selDay+'日累计(万元)':'当月累计(万元)')+'</th>'+
+(selDay!=null?'<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">当日兑换额</th>':'')+
 '<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">预估值(取低)</th>'+
 '<th style="text-align:center;padding:8px 10px;color:#94a3b8;font-weight:500;">预警</th>'+
 '</tr></thead><tbody>';
@@ -1363,6 +1369,9 @@ if(hasSettle26){
 html += '<td style="padding:8px 10px;text-align:center;color:'+ctrl2Color+';">'+(r.ctrl2>0?fmtNum(r.ctrl2):'-')+'</td>';
 }
 html += '<td style="padding:8px 10px;text-align:center;color:'+v26Color+';font-weight:600;">'+fmtNum(r.v26)+'</td>';
+if(selDay!=null){
+html += '<td style="padding:8px 10px;text-align:center;color:#cbd5e1;">'+(r.dayVal>0?fmtNum(r.dayVal):'-')+'</td>';
+}
 html += '<td style="padding:8px 10px;text-align:center;color:#f87172;">'+(r.forecast>0?fmtNum(r.forecast):'-')+'</td>';
 html += '<td style="padding:8px 10px;text-align:center;">'+warnHtml+'</td>';
 html += '</tr>';
@@ -1391,6 +1400,9 @@ if(hasSettle26){
 html += '<td style="padding:8px 10px;text-align:center;color:'+totalCtrl2Color+';font-weight:700;">'+(totalCtrl2>0?fmtNum(totalCtrl2):'-')+'</td>';
 }
 html += '<td style="padding:8px 10px;text-align:center;color:#f1f5f9;font-weight:700;">'+fmtNum(totalV26)+'</td>';
+if(selDay!=null){
+html += '<td style="padding:8px 10px;text-align:center;color:#cbd5e1;font-weight:700;">'+fmtNum(totalDayVal)+'</td>';
+}
 html += '<td style="padding:8px 10px;text-align:center;color:#f87172;font-weight:700;">'+(totalForecast>0?fmtNum(totalForecast):'-')+'</td>';
 html += '<td style="padding:8px 10px;text-align:center;font-weight:700;">'+totalWarnHtml+'</td>';
 html += '</tr>';

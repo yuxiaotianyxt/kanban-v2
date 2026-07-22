@@ -1696,7 +1696,7 @@ if(!D.DM || !D.DM[mk]){var _bd=document.getElementById('proMonBody');if(_bd)_bd.
 var daily = D.DM[mk].daily;
 var typesData = (D.DM[mk].types && D.DM[mk].types[bizType]) ? D.DM[mk].types[bizType] : null;
 
-// If no daily data but types data exists, use v26 as cumulative
+// If no daily data but types data exists, use v26 as cumulative (only if in 万元)
 if(!daily){
 if(typesData){
 Object.keys(typesData).forEach(function(prov){
@@ -1717,7 +1717,6 @@ Object.keys(daily).forEach(function(dk){var dn=parseInt(dk);if(dn>maxDay)maxDay=
 targetDay=maxDay;
 }
 if(targetDay===0){
-// No valid day - fall back to types v26
 if(typesData){
 Object.keys(typesData).forEach(function(prov){
 if(prov==='总计'||prov==='合计')return;
@@ -1753,7 +1752,6 @@ if(!provData[prov])provData[prov]={daily:0,cumul:0};
 provData[prov].cumul=cumulData[prov];
 });
 }else if(typesData){
-// Fall back to types v26 when daily data for this bizType doesn't exist
 Object.keys(typesData).forEach(function(prov){
 if(prov==='总计'||prov==='合计')return;
 if(!provData[prov])provData[prov]={daily:0,cumul:0};
@@ -1787,7 +1785,8 @@ if(D.DM&&D.DM[mk]&&D.DM[mk].types&&D.DM[mk].types[bizType]&&D.DM[mk].types[bizTy
 var td=D.DM[mk].types[bizType][r.prov];
 var v26=r.cumul;
 var v25=td.v25||0;
-if(v25>0)yoyStr2=fmtChg(((v26-v25)/v25*100));
+// Only show 同比 if v25 is in same unit as v26 (万元)
+if(v25>0 && v26>0)yoyStr2=fmtChg(((v26-v25)/v25*100));
 var prevMk=String(parseInt(mk)-1);
 if(selDay!=null && D.DM&&D.DM[prevMk]&&D.DM[prevMk].daily){
 var plDay=0;
@@ -1801,10 +1800,10 @@ prevCumul=D.DM[prevMk].daily[String(plDay)][bizType][r.prov];
 }else if(D.DM[prevMk].types&&D.DM[prevMk].types[bizType]&&D.DM[prevMk].types[bizType][r.prov]){
 prevCumul=D.DM[prevMk].types[bizType][r.prov].v26||0;
 }
-if(prevCumul>0)momStr2=fmtChg(((v26-prevCumul)/prevCumul*100));
+if(prevCumul>0 && v26>0)momStr2=fmtChg(((v26-prevCumul)/prevCumul*100));
 }else if(D.DM&&D.DM[prevMk]&&D.DM[prevMk].types&&D.DM[prevMk].types[bizType]&&D.DM[prevMk].types[bizType][r.prov]){
 var prevCumul2=D.DM[prevMk].types[bizType][r.prov].v26||0;
-if(prevCumul2>0)momStr2=fmtChg(((v26-prevCumul2)/prevCumul2*100));
+if(prevCumul2>0 && v26>0)momStr2=fmtChg(((v26-prevCumul2)/prevCumul2*100));
 }
 }
 }
@@ -1832,7 +1831,7 @@ Object.keys(allTypes).forEach(p=>{
 if(p==='合计')return;
 gV25+=allTypes[p].v25||0;
 });
-if(gV25>0)grandYoy2=fmtChg(((gV26-gV25)/gV25*100));
+if(gV25>0 && gV26>0)grandYoy2=fmtChg(((gV26-gV25)/gV25*100));
 var prevMk2=String(parseInt(mk2)-1);
 if(selDay!=null && D.DM&&D.DM[prevMk2]&&D.DM[prevMk2].daily){
 var glDay=0;
@@ -1853,12 +1852,12 @@ Object.keys(pAll).forEach(function(p){
 if(p!=='合计')gPrev26+=(pAll[p].v26||0);
 });
 }
-if(gPrev26>0)grandMom2=fmtChg(((gV26-gPrev26)/gPrev26*100));
+if(gPrev26>0 && gV26>0)grandMom2=fmtChg(((gV26-gPrev26)/gPrev26*100));
 }else if(D.DM&&D.DM[prevMk2]&&D.DM[prevMk2].types&&D.DM[prevMk2].types[bizType]){
 var prevAll=D.DM[prevMk2].types[bizType];
 var gPrev26b=0;
 Object.keys(prevAll).forEach(p=>{if(p!=='合计')gPrev26b+=prevAll[p].v26||0;});
-if(gPrev26b>0)grandMom2=fmtChg(((gV26-gPrev26b)/gPrev26b*100));
+if(gPrev26b>0 && gV26>0)grandMom2=fmtChg(((gV26-gPrev26b)/gPrev26b*100));
 }
 
 }

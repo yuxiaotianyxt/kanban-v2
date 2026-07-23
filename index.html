@@ -1095,7 +1095,7 @@ var hfPct=r.total>0?(r.huafei/r.total*100):0;
 var zyPct=r.total>0?(r.ziyou/r.total*100):0;
 var sfPct=r.total>0?(r.sanfang/r.total*100):0;
 var profPct=0;
-return '<tr class="'+rankCls+'"><td>'+(i+1)+'</td><td class="prov-name">'+r.prov+'</td><td class="num">'+r.total.toFixed(2)+'</td><td class="num">'+r.huafei.toFixed(2)+'<span class="pct">'+hfPct.toFixed(1)+'%</span></td><td class="num">'+r.ziyou.toFixed(2)+'<span class="pct">'+zyPct.toFixed(1)+'%</span></td><td class="num">'+r.sanfang.toFixed(2)+'<span class="pct">'+sfPct.toFixed(1)+'%</span></td><td class="num">'+(r.prof>0?r.prof.toFixed(2):'-')+'</td><td>-</td></tr>';
+return '<tr class="'+rankCls+'"><td>'+(i+1)+'</td><td class="prov-name">'+r.prov+'</td><td class="num">'+r.total.toFixed(2)+'</td><td class="num">'+r.huafei.toFixed(2)+'</td><td class="num">'+r.ziyou.toFixed(2)+'</td><td class="num">'+r.sanfang.toFixed(2)+'</td><td class="num">'+(r.prof>0?r.prof.toFixed(2):'-')+'</td><td>-</td></tr>';
 }).join('');
 return;
 }

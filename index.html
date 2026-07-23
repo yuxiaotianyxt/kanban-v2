@@ -1074,8 +1074,13 @@ D.prov_entry_data = {};
 // === 渲染：分省排行 ===
 function renderProvince(){
 const sel = getSelectedData();
-if(sel.dayMode){document.getElementById('provinceBody').innerHTML='<tr><td colspan="8" class="no-data">分省排行仅月维度可用</td></tr>';return;}
-const months = sel.months;
+var months;
+if(sel.dayMode){
+if(!sel.dateStr){document.getElementById('provinceBody').innerHTML='<tr><td colspan="8" class="no-data">暂无数据</td></tr>';return;}
+months=[sel.dateStr.substring(0,7)];
+}else{
+months = sel.months;
+}
 if(months.length===0){document.getElementById('provinceBody').innerHTML='<tr><td colspan="8" class="no-data">暂无数据</td></tr>';return;}
 
 const prevMonths = getPrevYearMonths(months);

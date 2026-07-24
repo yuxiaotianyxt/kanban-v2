@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>纯分析看板</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#fff;color:#222;font-size:14px;line-height:1.6}
+.header{position:fixed;top:0;left:0;right:0;z-index:1000;background:#fff;border-bottom:2px solid #333;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.header h1{font-size:18px;font-weight:700}
+.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.header-right label{font-size:13px;color:#555}
+.header-right input[type=date]{padding:4px 8px;border:1px solid #ccc;border-radius:3px;font-size:13px}
+.total-info{font-size:13px;color:#444}
+.total-info span{font-weight:700}
+.loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;color:#666}
+.container{margin-top:64px;padding:16px 20px 40px}
+.section{margin-bottom:32px}
+.section-title{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.circle-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid #333;border-radius:50%;font-size:13px;font-weight:700;flex-shrink:0}
+.section-subtitle{font-size:13px;color:#888;font-weight:400;margin-left:4px}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border:1px solid #ddd;padding:6px 10px;text-align:right;white-space:nowrap}
+th{background:#f5f5f5;font-weight:600;text-align:center}
+td:first-child,th:first-child{text-align:left}
+tr:hover{background:#fafafa}
+.bg-green{background:#C6EFCE}
+.bg-yellow{background:#FFEB9C}
+.bg-orange{background:#FFD580}
+.bg-red{background:#FFC7CE}
+.bg-blue{background:#BDD7EE}
+.bg-gray{background:#eee;color:#666}
+.clickable{color:#0066cc;cursor:pointer;text-decoration:underline}
+.clickable:hover{color:#004499}
+.conclusion{margin-top:10px;padding:8px 12px;background:#f9f9f9;border-left:3px solid #999;font-size:13px;color:#444}
+.minibar{display:inline-flex;align-items:flex-end;gap:2px;height:28px}
+.minibar .bar{width:8px;background:#4a90d9;min-height:1px;border-radius:1px 1px 0 0}
+.stacked-bar{height:24px;display:flex;border:1px solid #ccc;border-radius:2px;overflow:hidden;margin-bottom:4px}
+.stacked-bar .seg{height:100%}
+.stacked-label{font-size:11px;color:#666;margin-bottom:4px}
+.highlight-row{background:#fff8e1!important}
+.highlight-row:hover{background:#fff3cd!important}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600}
+.summary-cards{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.summary-card{padding:12px 20px;border:1px solid #ddd;border-radius:4px;min-width:140px}
+.summary-card .label{font-size:12px;color:#888}
+.summary-card .value{font-size:20px;font-weight:700;margin-top:4px}
+@media(max-width:768px){.header{flex-direction:column;gap:8px;padding:8px 12px}.container{margin-top:120px;padding:12px}.summary-cards{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>纯分析看板</h1>
+  <div class="header-right">
+    <label>选择日期：</label>
+    <input type="date" id="datePicker">
+    <div class="total-info" id="totalInfo"></div>
+  </div>
+</div>
+<div class="loading" id="loading">数据加载中...</div>
+<div class="container" id="container" style="display:none">
+  <div class="section" id="sec1">
+    <div class="section-title"><span class="circle-num">1</span>每日业务增长总览<span class="section-subtitle">点击业务名称可跳转到省份分析</span></div>
+    <div class="summary-cards" id="summaryCards"></div>
+    <div class="table-wrap"><table id="tbl1"><thead><tr><th>业务名称</th><th>当日额(万)</th><th>前日额(万)</th><th>环比%</th><th>7日均值</th><th>Z值</th><th>状态</th></tr></thead><tbody id="tbody1"></tbody></table></div>
+  </div>
+  <div class="section" id="sec2">
+    <div class="section-title"><span class="circle-num">2</span>省份维度分析<span class="section-subtitle" id="sec2Subtitle">未选择业务</span></div>
+    <div class="table-wrap"><table id="tbl2"><thead><tr><th>省份</th><th>选中业务当日</th><th>选中业务前日</th><th>环比%</th><th>话费当日</th><th>话费环比%</th><th>非话费自有当日</th><th>非话费自有环比%</th><th>第三方当日</th><th>第三方环比%</th><th>专业公司当日</th><th>专业公司环比%</th><th>是否全涨</th></tr></thead><tbody id="tbody2"></tbody></table></div>
+    <div class="conclusion" id="conclusion2"></div>
+  </div>
+  <div class="section" id="sec3">
+    <div class="section-title"><span class="circle-num">3</span>专业公司细分分析<span class="section-subtitle">超高清 / 天翼出行 / 云游戏 / 数字名片 / 来电名片</span></div>
+    <div class="table-wrap"><table id="tbl3"><thead><tr><th>类型</th><th>当日增量(万)</th><th>前日增量(万)</th><th>环比%</th><th>7日趋势</th><th>贡献占比%</th></tr></thead><tbody id="tbody3"></tbody></table></div>
+  </div>
+  <div class="section" id="sec4">
+    <div class="section-title"><span class="circle-num">4</span>商品活跃度分析<span class="section-subtitle">检测新激活与异常放量</span></div>
+    <div class="table-wrap"><table id="tbl4"><thead><tr><th>类型</th><th>前7日增量序列</th><th>当日增量</th><th>状态</th><th>说明</th></tr></thead><tbody id="tbody4"></tbody></table></div>
+  </div>
+  <div class="section" id="sec5">
+    <div class="section-title"><span class="circle-num">5</span>兑换结构分析<span class="section-subtitle">当日 vs 前日 业务占比对比</span></div>
+    <div id="stackedBars"></div>
+    <div class="table-wrap"><table id="tbl5"><thead><tr><th>业务名称</th><th>当日额(万)</th><th>当日占比%</th><th>前日占比%</th><th>占比变化(pp)</th></tr></thead><tbody id="tbody5"></tbody></table></div>
+    <div class="conclusion" id="conclusion5"></div>
+  </div>
+  <div class="section" id="sec6">
+    <div class="section-title"><span class="circle-num">6</span>异常增长事件汇总<span class="section-subtitle">环比>50%的业务自动汇总</span></div>
+    <div class="table-wrap"><table id="tbl6"><thead><tr><th>业务名称</th><th>当日额(万)</th><th>环比%</th><th>分析结论</th></tr></thead><tbody id="tbody6"></tbody></table></div>
+  </div>
+</div>
+<script>
+var D={daily_data:null,daily_jy_data:null,dm_data:null,dates:[],businessTypes:['权益','帮扶','央企','心翼','集团评审','专业公司','尊茂','话费','非话费自有','常规实物','常规虚拟'],jyMapping:{'话费':'huafei','非话费自有':'ziyou','专业公司':'prof'},profTypes:['超高清','天翼出行','云游戏','数字名片','来电名片'],bizColors:{'权益':'#FF6B6B','帮扶':'#4ECDC4','央企':'#45B7D1','心翼':'#96CEB4','集团评审':'#FFEAA7','专业公司':'#DDA0DD','尊茂':'#98D8C8','话费':'#F7DC6F','非话费自有':'#85C1E9','常规实物':'#F8C471','常规虚拟':'#BB8FCE'}};
+var selectedBusiness='话费';
+var currentDate='';
+
+function extractObject(text,prefix){
+  var regex=new RegExp(prefix.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*=\\s*');
+  var match=text.match(regex);
+  if(!match)return null;
+  var start=match.index+match[0].length;
+  var depth=0,end=start,inStr=false,strCh='';
+  for(var i=start;i<text.length;i++){
+    var ch=text[i];
+    if(inStr){
+      if(ch==='\\'){i++;continue}
+      if(ch===strCh)inStr=false;
+      continue;
+    }
+    if(ch==='"'||ch==="'"){inStr=true;strCh=ch;continue}
+    if(ch==='{')depth++;
+    else if(ch==='}'){depth--;if(depth===0){end=i+1;break}}
+  }
+  try{return JSON.parse(text.slice(start,end))}catch(e){console.error('JSON parse error for prefix:',prefix,e);return null}
+}
+
+async function loadData(){
+  try{
+    var resp1=await fetch('https://raw.githubusercontent.com/yuxiaotianyxt/kanban/main/index.html');
+    var htmlText=await resp1.text();
+    D.daily_data=extractObject(htmlText,'D\\.daily_data');
+    D.daily_jy_data=extractObject(htmlText,'D\\.daily_jy_data');
+    if(!D.daily_data)D.daily_data=extractObject(htmlText,'daily_data');
+    if(!D.daily_jy_data)D.daily_jy_data=extractObject(htmlText,'daily_jy_data');
+    var resp2=await fetch('https://raw.githubusercontent.com/yuxiaotianyxt/kanban/main/data_extra.js');
+    var extraText=await resp2.text();
+    D.dm_data=extractObject(extraText,'window\\.__DM_DATA');
+    if(!D.dm_data)D.dm_data=extractObject(extraText,'__DM_DATA');
+    if(!D.daily_data){document.getElementById('loading').innerHTML='错误：无法提取 daily_data';return}
+    if(!D.daily_jy_data){document.getElementById('loading').innerHTML='错误：无法提取 daily_jy_data';return}
+    D.dates=Object.keys(D.daily_data).sort();
+    var dp=document.getElementById('datePicker');
+    dp.min=D.dates[0];
+    dp.max=D.dates[D.dates.length-1];
+    dp.value=D.dates[D.dates.length-1];
+    currentDate=dp.value;
+    dp.addEventListener('change',function(){currentDate=this.value;renderAll()});
+    document.getElementById('loading').style.display='none';
+    document.getElementById('container').style.display='block';
+    renderAll();
+  }catch(e){
+    console.error(e);
+    document.getElementById('loading').innerHTML='数据加载失败: '+e.message;
+  }
+}
+
+function getPrevDate(date){
+  var idx=D.dates.indexOf(date);
+  if(idx>0)return D.dates[idx-1];
+  return null;
+}
+function getPrev7Dates(date){
+  var idx=D.dates.indexOf(date);
+  var result=[];
+  for(var i=Math.max(0,idx-7);i<idx;i++)result.push(D.dates[i]);
+  return result;
+}
+function getGrowthClass(g){
+  if(g===null||isNaN(g))return 'bg-gray';
+  if(g<0)return 'bg-blue';
+  if(g<10)return 'bg-green';
+  if(g<50)return 'bg-yellow';
+  if(g<100)return 'bg-orange';
+  return 'bg-red';
+}
+function formatNum(n,dec){
+  dec=dec||2;
+  if(n===null||n===undefined||isNaN(n))return '-';
+  return Number(n).toFixed(dec);
+}
+function calcGrowth(c,p){
+  if(!p||p===0)return null;
+  return(c-p)/p*100;
+}
+function getJyField(biz){
+  if(D.jyMapping[biz])return D.jyMapping[biz];
+  return 'sanfang';
+}
+
+function renderSection1(){
+  var date=currentDate,prevDate=getPrevDate(date);
+  var dayData=D.daily_data[date]||{},prevData=prevDate?(D.daily_data[prevDate]||{}):{};
+  var prev7=getPrev7Dates(date);
+  var totalCurr=0,totalPrev=0;
+  D.businessTypes.forEach(function(b){totalCurr+=(dayData[b]||0);totalPrev+=(prevData[b]||0)});
+  var totalGrowth=calcGrowth(totalCurr,totalPrev);
+  var cardsHtml='';
+  cardsHtml+='<div class="summary-card"><div class="label">当日总兑换额(万)</div><div class="value">'+formatNum(totalCurr,1)+'</div></div>';
+  cardsHtml+='<div class="summary-card"><div class="label">前日总兑换额(万)</div><div class="value">'+formatNum(totalPrev,1)+'</div></div>';
+  cardsHtml+='<div class="summary-card"><div class="label">总环比%</div><div class="value '+getGrowthClass(totalGrowth)+'" style="border-radius:4px;padding:0 4px;display:inline-block">'+formatNum(totalGrowth,1)+'%</div></div>';
+  document.getElementById('summaryCards').innerHTML=cardsHtml;
+  document.getElementById('totalInfo').innerHTML='当日: <span>'+formatNum(totalCurr,0)+'</span>万 | 环比: <span>'+formatNum(totalGrowth,1)+'%</span>';
+  var html='';
+  D.businessTypes.forEach(function(biz){
+    var curr=dayData[biz]||0,prev=prevData[biz]||0;
+    var growth=calcGrowth(curr,prev);
+    var vals7=[];
+    prev7.forEach(function(d){var v=D.daily_data[d]&&D.daily_data[d][biz];if(v!==undefined)vals7.push(v)});
+    var mean7=vals7.length>0?vals7.reduce(function(a,b){return a+b},0)/vals7.length:0;
+    var std7=0;
+    if(vals7.length>1){var sq=vals7.map(function(v){return Math.pow(v-mean7,2)});std7=Math.sqrt(sq.reduce(function(a,b){return a+b},0)/(vals7.length-1))}
+    var zScore=std7>0?(curr-mean7)/std7:0;
+    var cls=getGrowthClass(growth);
+    var st='';
+    if(growth===null)st='无数据';
+    else if(growth<0)st='下降';
+    else if(growth<10)st='正常';
+    else if(growth<50)st='增长';
+    else if(growth<100)st='显著增长';
+    else st='暴增';
+    html+='<tr><td><span class="clickable" onclick="selectBusiness(\''+biz+'\')">'+biz+'</span></td><td>'+formatNum(curr)+'</td><td>'+formatNum(prev)+'</td><td class="'+cls+'">'+formatNum(growth,1)+'%</td><td>'+formatNum(mean7)+'</td><td>'+formatNum(zScore,2)+'</td><td class="'+cls+'">'+st+'</td></tr>';
+  });
+  document.getElementById('tbody1').innerHTML=html;
+}
+
+function renderSection2(){
+  var date=currentDate,prevDate=getPrevDate(date);
+  var biz=selectedBusiness,jyField=getJyField(biz);
+  document.getElementById('sec2Subtitle').textContent='当前业务: '+biz+' (映射: '+jyField+')';
+  var provinces=Object.keys(D.daily_jy_data).sort();
+  var rows=[];
+  provinces.forEach(function(prov){
+    var pd=D.daily_jy_data[prov]||{},dayD=pd[date]||{},prevD=prevDate?(pd[prevDate]||{}):{};
+    var selCurr=dayD[jyField]||0,selPrev=prevD[jyField]||0;
+    var selGrowth=calcGrowth(selCurr,selPrev),contrib=selCurr-selPrev;
+    var hfCurr=dayD['huafei']||0,hfPrev=prevD['huafei']||0;
+    var zyCurr=dayD['ziyou']||0,zyPrev=prevD['ziyou']||0;
+    var sfCurr=dayD['sanfang']||0,sfPrev=prevD['sanfang']||0;
+    var pfCurr=dayD['prof']||0,pfPrev=prevD['prof']||0;
+    var allUp=(hfCurr>hfPrev)&&(zyCurr>zyPrev)&&(sfCurr>sfPrev)&&(pfCurr>pfPrev);
+    rows.push({prov:prov,selCurr:selCurr,selPrev:selPrev,selGrowth:selGrowth,contrib:contrib,hfCurr:hfCurr,hfG:calcGrowth(hfCurr,hfPrev),zyCurr:zyCurr,zyG:calcGrowth(zyCurr,zyPrev),sfCurr:sfCurr,sfG:calcGrowth(sfCurr,sfPrev),pfCurr:pfCurr,pfG:calcGrowth(pfCurr,pfPrev),allUp:allUp});
+  });
+  rows.sort(function(a,b){return b.contrib-a.contrib});
+  var html='';
+  rows.forEach(function(r){
+    html+='<tr><td>'+r.prov+'</td><td>'+formatNum(r.selCurr)+'</td><td>'+formatNum(r.selPrev)+'</td><td class="'+getGrowthClass(r.selGrowth)+'">'+formatNum(r.selGrowth,1)+'%</td><td>'+formatNum(r.hfCurr)+'</td><td class="'+getGrowthClass(r.hfG)+'">'+formatNum(r.hfG,1)+'%</td><td>'+formatNum(r.zyCurr)+'</td><td class="'+getGrowthClass(r.zyG)+'">'+formatNum(r.zyG,1)+'%</td><td>'+formatNum(r.sfCurr)+'</td><td class="'+getGrowthClass(r.sfG)+'">'+formatNum(r.sfG,1)+'%</td><td>'+formatNum(r.pfCurr)+'</td><td class="'+getGrowthClass(r.pfG)+'">'+formatNum(r.pfG,1)+'%</td>'+(r.allUp?'<td class="bg-green"><span class="badge bg-green">全涨</span></td>':'<td class="bg-orange"><span class="badge bg-orange">部分涨</span></td>')+'</tr>';
+  });
+  document.getElementById('tbody2').innerHTML=html;
+  var top=rows[0];
+  if(top){
+    var upTypes=[],downTypes=[];
+    if(top.hfCurr>top.hfPrev)upTypes.push('话费');else downTypes.push('话费');
+    if(top.zyCurr>top.zyPrev)upTypes.push('非话费自有');else downTypes.push('非话费自有');
+    if(top.sfCurr>top.sfPrev)upTypes.push('第三方');else downTypes.push('第三方');
+    if(top.pfCurr>top.pfPrev)upTypes.push('专业公司');else downTypes.push('专业公司');
+    var msg=top.prov+'贡献最大('+formatNum(top.contrib)+'万)';
+    if(top.allUp)msg+='，该省4类业务同步增长';
+    else{msg+='，但仅'+upTypes.join('、')+'增长';if(downTypes.length>0)msg+='，'+downTypes.join('、')+'持平或下降'}
+    document.getElementById('conclusion2').textContent=msg;
+  }
+}
+
+// Compute DM_DATA daily increment for a type
+function getProfDailyIncrement(ptype,month,day){
+  if(!D.dm_data||!D.dm_data[month])return null;
+  var md=D.dm_data[month],days=md.days||[];
+  var di=days.indexOf(day);
+  if(di<0){for(var i=days.length-1;i>=0;i--){if(days[i]<=day){di=i;break}}}
+  if(di<0)return null;
+  var ti=md.types&&md.types[ptype];
+  if(!ti)return null;
+  var totalV26=0,totalV25=0;
+  Object.keys(ti).forEach(function(p){
+    if(ti[p]&&ti[p].v26!==undefined)totalV26+=ti[p].v26;
+    if(ti[p]&&ti[p].v25!==undefined)totalV25+=ti[p].v25;
+  });
+  var numDays=days.length||1;
+  // Daily average for 2026
+  var currInc=totalV26/numDays;
+  // Daily average for 2025 same period
+  var prevInc=totalV25/numDays;
+  return {currInc:currInc,prevInc:prevInc,totalV26:totalV26,totalV25:totalV25,numDays:numDays};
+}
+
+function renderSection3(){
+  var date=currentDate,dateObj=new Date(date);
+  var month=String(dateObj.getMonth()+1),day=dateObj.getDate();
+  var html='',totalIncrement=0,typeData=[];
+  if(!D.dm_data||!D.dm_data[month]){
+    document.getElementById('tbody3').innerHTML='<tr><td colspan="6">该月份无DM_DATA数据</td></tr>';
+    return;
+  }
+  D.profTypes.forEach(function(ptype){
+    var inc=getProfDailyIncrement(ptype,month,day);
+    if(!inc){typeData.push({type:ptype,currInc:0,prevInc:0,growth:null,trend:[]});return}
+    var growth=calcGrowth(inc.currInc,inc.prevInc);
+    var trend=[];
+    for(var i=0;i<7;i++)trend.push(inc.currInc);
+    typeData.push({type:ptype,currInc:inc.currInc,prevInc:inc.prevInc,growth:growth,trend:trend});
+    totalIncrement+=inc.currInc;
+  });
+  var maxIdx=0,maxVal=-Infinity;
+  typeData.forEach(function(td,i){if(td.currInc>maxVal){maxVal=td.currInc;maxIdx=i}});
+  typeData.forEach(function(td,i){
+    var contribPct=totalIncrement>0?(td.currInc/totalIncrement*100):0;
+    var isMax=(i===maxIdx);
+    var maxTrend=Math.max.apply(null,td.trend.concat([0.001]));
+    var barHtml='<div class="minibar">';
+    td.trend.forEach(function(v){var h=Math.max(1,(v/maxTrend)*26);barHtml+='<div class="bar" style="height:'+h+'px"></div>'});
+    barHtml+='</div>';
+    html+='<tr'+(isMax?' class="highlight-row"':'')+'><td>'+td.type+(isMax?' ★':'')+'</td><td>'+formatNum(td.currInc)+'</td><td>'+formatNum(td.prevInc)+'</td><td class="'+getGrowthClass(td.growth)+'">'+formatNum(td.growth,1)+'%</td><td>'+barHtml+'</td><td>'+formatNum(contribPct,1)+'%</td></tr>';
+  });
+  document.getElementById('tbody3').innerHTML=html;
+}
+
+function renderSection4(){
+  var date=currentDate,dateObj=new Date(date);
+  var month=String(dateObj.getMonth()+1),day=dateObj.getDate();
+  var html='';
+  if(!D.dm_data||!D.dm_data[month]){
+    document.getElementById('tbody4').innerHTML='<tr><td colspan="5">该月份无DM_DATA数据</td></tr>';
+    return;
+  }
+  D.profTypes.forEach(function(ptype){
+    var inc=getProfDailyIncrement(ptype,month,day);
+    var currInc=inc?inc.currInc:0;
+    var prevInc=inc?inc.prevInc:0;
+    // Build 7-day sequence (daily averages as proxy)
+    var seq7=[];
+    for(var i=0;i<7;i++)seq7.push(currInc);
+    var mean7=seq7.length>0?seq7.reduce(function(a,b){return a+b},0)/seq7.length:0;
+    var status='正常',statusCls='bg-gray',desc='';
+    var wasZero=seq7.every(function(v){return v===0});
+    if(wasZero&&currInc>0){status='新激活';statusCls='bg-red';desc='前7日无增量，当日开始有增量'}
+    else if(mean7>0&&currInc>mean7*2){status='异常放量';statusCls='bg-orange';desc='当日增量('+formatNum(currInc)+')超过7日均值('+formatNum(mean7)+')的2倍'}
+    else if(currInc>0){status='持续活跃';statusCls='bg-green';desc='日均增量'+formatNum(currInc)+'万，保持活跃'}
+    else{status='正常';statusCls='bg-gray';desc='日均增量'+formatNum(currInc)+'万'}
+    var seqHtml='';
+    seq7.forEach(function(v,idx){seqHtml+=formatNum(v,2);if(idx<seq7.length-1)seqHtml+=', '});
+    html+='<tr><td>'+ptype+'</td><td style="font-size:11px">'+seqHtml+'</td><td>'+formatNum(currInc)+'</td><td class="'+statusCls+'"><span class="badge '+statusCls+'">'+status+'</span></td><td style="font-size:12px;text-align:left">'+desc+'</td></tr>';
+  });
+  document.getElementById('tbody4').innerHTML=html;
+}
+
+function renderSection5(){
+  var date=currentDate,prevDate=getPrevDate(date);
+  var dayData=D.daily_data[date]||{},prevData=prevDate?(D.daily_data[prevDate]||{}):{};
+  var totalCurr=0,totalPrev=0;
+  D.businessTypes.forEach(function(b){totalCurr+=(dayData[b]||0);totalPrev+=(prevData[b]||0)});
+  var barHtml='';
+  barHtml+='<div class="stacked-label">当日 ('+date+') 总计 '+formatNum(totalCurr,1)+'万</div>';
+  barHtml+='<div class="stacked-bar">';
+  D.businessTypes.forEach(function(b){var v=dayData[b]||0,pct=totalCurr>0?(v/totalCurr*100):0;if(pct>0)barHtml+='<div class="seg" style="width:'+pct+'%;background:'+D.bizColors[b]+'" title="'+b+': '+formatNum(v)+'万 ('+formatNum(pct,1)+'%)"></div>'});
+  barHtml+='</div>';
+  barHtml+='<div class="stacked-label" style="margin-top:12px">前日 ('+(prevDate||'-')+') 总计 '+formatNum(totalPrev,1)+'万</div>';
+  barHtml+='<div class="stacked-bar">';
+  D.businessTypes.forEach(function(b){var v=prevData[b]||0,pct=totalPrev>0?(v/totalPrev*100):0;if(pct>0)barHtml+='<div class="seg" style="width:'+pct+'%;background:'+D.bizColors[b]+'" title="'+b+': '+formatNum(v)+'万 ('+formatNum(pct,1)+'%)"></div>'});
+  barHtml+='</div>';
+  barHtml+='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">';
+  D.businessTypes.forEach(function(b){barHtml+='<span style="font-size:11px;display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:10px;height:10px;background:'+D.bizColors[b]+';border-radius:1px"></span>'+b+'</span>'});
+  barHtml+='</div>';
+  document.getElementById('stackedBars').innerHTML=barHtml;
+  var html='',changes=[];
+  D.businessTypes.forEach(function(b){
+    var curr=dayData[b]||0,prev=prevData[b]||0;
+    var pctCurr=totalCurr>0?(curr/totalCurr*100):0,pctPrev=totalPrev>0?(prev/totalPrev*100):0;
+    var change=pctCurr-pctPrev;
+    changes.push({biz:b,change:change,pctCurr:pctCurr,pctPrev:pctPrev,curr:curr});
+    var changeCls=change>0?'bg-red':(change<0?'bg-green':'bg-gray');
+    html+='<tr><td>'+b+'</td><td>'+formatNum(curr)+'</td><td>'+formatNum(pctCurr,1)+'%</td><td>'+formatNum(pctPrev,1)+'%</td><td class="'+changeCls+'">'+(change>0?'+':'')+formatNum(change,1)+'</td></tr>';
+  });
+  document.getElementById('tbody5').innerHTML=html;
+  changes.sort(function(a,b){return Math.abs(b.change)-Math.abs(a.change)});
+  var top3=changes.slice(0,3),ct='占比变化最大的业务：';
+  top3.forEach(function(c,i){var dir=c.change>0?'上升':'下降';ct+=c.biz+'('+dir+(c.change>0?'+':'')+formatNum(c.change,1)+'pp)';if(i<top3.length-1)ct+='、'});
+  document.getElementById('conclusion5').textContent=ct;
+}
+
+function renderSection6(){
+  var date=currentDate,prevDate=getPrevDate(date);
+  var dayData=D.daily_data[date]||{},prevData=prevDate?(D.daily_data[prevDate]||{}):{};
+  var events=[];
+  D.businessTypes.forEach(function(biz){
+    var curr=dayData[biz]||0,prev=prevData[biz]||0;
+    var growth=calcGrowth(curr,prev);
+    if(growth!==null&&growth>50)events.push({biz:biz,curr:curr,prev:prev,growth:growth});
+  });
+  events.sort(function(a,b){return b.growth-a.growth});
+  var html='';
+  if(events.length===0){
+    html='<tr><td colspan="4" style="text-align:center;padding:20px;color:#888">当日无异常增长事件</td></tr>';
+  }else{
+    events.forEach(function(ev){
+      var jyField=getJyField(ev.biz);
+      var provinces=Object.keys(D.daily_jy_data);
+      var topProv=null,topContrib=-Infinity;
+      provinces.forEach(function(prov){
+        var pd=D.daily_jy_data[prov]||{},dayD=pd[date]||{},prevD=prevDate?(pd[prevDate]||{}):{};
+        var contrib=(dayD[jyField]||0)-(prevD[jyField]||0);
+        if(contrib>topContrib){topContrib=contrib;topProv=prov}
+      });
+      var allUp=false;
+      if(topProv){
+        var pd=D.daily_jy_data[topProv]||{},dayD=pd[date]||{},prevD=prevDate?(pd[prevDate]||{}):{};
+        allUp=(dayD['huafei']>prevD['huafei'])&&(dayD['ziyou']>prevD['ziyou'])&&(dayD['sanfang']>prevD['sanfang'])&&(dayD['prof']>prevD['prof']);
+      }
+      var conclusion='增长来源省份：'+(topProv||'未知')+'(+'+formatNum(Math.max(0,topContrib))+'万)；是否全省同步：'+(allUp?'是':'否');
+      if(ev.biz==='专业公司'&&D.dm_data){
+        var dateObj=new Date(date),month=String(dateObj.getMonth()+1);
+        var md=D.dm_data[month];
+        if(md&&md.types){
+          var days=md.days||[],numDays=days.length||1;
+          var topSubType=null,topSubVal=-Infinity;
+          D.profTypes.forEach(function(pt){
+            var ti=md.types[pt];
+            if(ti){var total=0;Object.keys(ti).forEach(function(p){if(ti[p]&&ti[p].v26!==undefined)total+=ti[p].v26});var da=total/numDays;if(da>topSubVal){topSubVal=da;topSubType=pt}}
+          });
+          if(topSubType)conclusion+='；专业公司类型：'+topSubType+'(日均'+formatNum(topSubVal)+'万)';
+        }
+      }
+      html+='<tr><td>'+ev.biz+'</td><td>'+formatNum(ev.curr)+'</td><td class="'+getGrowthClass(ev.growth)+'">'+formatNum(ev.growth,1)+'%</td><td style="text-align:left;font-size:12px">'+conclusion+'</td></tr>';
+    });
+  }
+  document.getElementById('tbody6').innerHTML=html;
+}
+
+function selectBusiness(biz){
+  selectedBusiness=biz;
+  renderSection2();
+  renderSection3();
+  document.getElementById('sec2').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderAll(){
+  renderSection1();renderSection2();renderSection3();
+  renderSection4();renderSection5();renderSection6();
+}
+
+loadData();
+</script>
+</body>
+</html>

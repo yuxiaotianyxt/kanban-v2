@@ -101,7 +101,7 @@
 </div>
 <div id="alertBody"></div>
 
-<div class="footer">数据来源：商城数据（订单维度） · 口径：总兑换额 = 话费 + 非话费自有 + 第三方（含尊茂等子类） + 专业公司（超高清/天翼出行/云游戏/其他专业公司） · 同比：所选月份 vs 去年同期 · 环比：所选月份 vs 前一段相同月份数 · v9.0：业务结构口径调整——其他专业公司从第三方移至专业公司，尊茂列为第三方子类</div>
+<div class="footer">数据来源：商城数据（订单维度） · 口径：总兑换额 = 话费 + 非话费自有 + 第三方（含尊茂等子类） + 专业公司（超高清/天翼出行/云游戏/其他专业公司） · 同比：所选月份 vs 去年同期 · 环比：所选月份 vs 前一段相同月份数 · v9.19：常规虚拟同比修复（daily_data为0时回退sanfang_detail） · v9.0：业务结构口径调整——其他专业公司从第三方移至专业公司，尊茂列为第三方子类</div>
 </div>
 <script>// 异步加载的专业公司监测和省份渠道数据
 // Auto-generated from kanban HTML optimization (v9.15)
@@ -880,8 +880,8 @@ const sfChainMonths = getPrevPeriodMonths(months);
 const sanfangSubData = sanfangSubNames.map((nm,i)=>{
 let val=0, prevVal=0, chainVal=0;
 months.forEach(m=>{const sd=D.sanfang_detail[m]; if(sd&&sd[nm]) val+=sd[nm];});
-sfPrevMonths.forEach((m,si)=>{var dc=getCurrentMonthDayCount(months[si]);var dt=dc>0?getDailyMonthSumForDays(m,dc):null;if(dt&&dt.sanfangCats[nm]!=null){prevVal+=dt.sanfangCats[nm];}else{var ratio=getMonthDayRatio(months[si]);const sd=D.sanfang_detail[m]; if(sd&&sd[nm]) prevVal+=sd[nm]*ratio;}});
-sfChainMonths.forEach((m,ci)=>{var dc=getCurrentMonthDayCount(months[ci]);var dt=dc>0?getDailyMonthSumForDays(m,dc):null;if(dt&&dt.sanfangCats[nm]!=null){chainVal+=dt.sanfangCats[nm];}else{var ratio=getMonthDayRatio(months[ci]);const sd=D.sanfang_detail[m]; if(sd&&sd[nm]) chainVal+=sd[nm]*ratio;}});
+sfPrevMonths.forEach((m,si)=>{var dc=getCurrentMonthDayCount(months[si]);var dt=dc>0?getDailyMonthSumForDays(m,dc):null;if(dt&&dt.sanfangCats[nm]!=null&&dt.sanfangCats[nm]>0){prevVal+=dt.sanfangCats[nm];}else{var ratio=getMonthDayRatio(months[si]);const sd=D.sanfang_detail[m]; if(sd&&sd[nm]) prevVal+=sd[nm]*ratio;}});
+sfChainMonths.forEach((m,ci)=>{var dc=getCurrentMonthDayCount(months[ci]);var dt=dc>0?getDailyMonthSumForDays(m,dc):null;if(dt&&dt.sanfangCats[nm]!=null&&dt.sanfangCats[nm]>0){chainVal+=dt.sanfangCats[nm];}else{var ratio=getMonthDayRatio(months[ci]);const sd=D.sanfang_detail[m]; if(sd&&sd[nm]) chainVal+=sd[nm]*ratio;}});
 const yoy = calcYoy(val, prevVal>0?prevVal:null);
 const chain = calcYoy(val, chainVal>0?chainVal:null);
 return {name:nm, val, prevVal, chainVal, yoy, chain, color:sanfangSubColors[i]};

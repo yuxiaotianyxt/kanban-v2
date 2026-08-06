@@ -220,7 +220,7 @@ let viewMode = 'day';
 let selectedDate = null;
 var dailyDates = D.daily_data ? Object.keys(D.daily_data).sort() : [];
 const dailyCatKeys = ['话费','非话费自有','权益','帮扶','央企','心翼','集团评审','专业公司','尊茂','常规实物','常规虚拟'];
-const dailyProfCats = ['专业公司'];
+const dailyProfCats = ['超高清','云游戏','天翼出行','其他专业公司'];
 const dailySanfangCats = ['权益','帮扶','央企','心翼','集团评审','尊茂','常规实物','常规虚拟'];
 
 function getDailyAgg(dateStr){
@@ -238,7 +238,7 @@ function getProfMTD(dateStr){
   if(!dateStr||!D.daily_data)return null;
   const parts=dateStr.split('-');
   const monthPrefix=parts[0]+'-'+parts[1];
-  const profCats=['超高清','天翼出行','云游戏','专业公司'];
+  const profCats=['超高清','天翼出行','云游戏','其他专业公司'];
   const result={};
   let total=0;
   profCats.forEach(cat=>{
